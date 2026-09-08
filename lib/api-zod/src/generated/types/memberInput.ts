@@ -5,33 +5,6 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-export interface HealthStatus {
-  status: string;
-}
-
-export interface ErrorResponse {
-  error: string;
-}
-
-export interface NotionDatabase {
-  id: string;
-  title: string;
-  url: string;
-  lastEditedTime: string;
-}
-
-export interface MemberSummary {
-  id: string;
-  name: string;
-  url: string;
-  lastEditedTime: string;
-  /** @nullable */
-  gender?: string | null;
-  /** @nullable */
-  civilStatus?: string | null;
-  /** @nullable */
-  churchPosition?: string | null;
-}
 
 export interface MemberInput {
   databaseId?: string;
@@ -88,31 +61,3 @@ export interface MemberInput {
   /** @nullable */
   specialSkills?: string | null;
 }
-
-export type Member = MemberSummary & MemberInput;
-
-export type MemberUpdate = MemberInput;
-
-export interface MemberSummaryStats {
-  total: number;
-  recentlyUpdated: number;
-  ministryInterestCount: number;
-}
-
-export type ListNotionDatabasesParams = {
-query?: string;
-};
-
-export type ListMembersParams = {
-databaseId: string;
-query?: string;
-};
-
-export type GetMemberParams = {
-databaseId: string;
-};
-
-export type GetMemberSummaryParams = {
-databaseId: string;
-};
-

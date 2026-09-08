@@ -10,6 +10,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: notion
+    description: Notion connection and database discovery
+  - name: members
+    description: Church member records stored in Notion
 paths:
   /healthz:
     get:
@@ -24,6 +28,181 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /notion/databases:
+    get:
+      operationId: listNotionDatabases
+      tags: [notion]
+      summary: Find accessible Notion databases
+      parameters:
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Accessible databases
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NotionDatabase"
+        "502":
+          description: Notion is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /members:
+    get:
+      operationId: listMembers
+      tags: [members]
+      summary: List member records
+      parameters:
+        - name: databaseId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Member records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MemberSummary"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createMember
+      tags: [members]
+      summary: Create a member record in Notion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberInput"
+      responses:
+        "201":
+          description: Created member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /members/{id}:
+    get:
+      operationId: getMember
+      tags: [members]
+      summary: Get a member record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: databaseId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Member record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "404":
+          description: Member not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateMember
+      tags: [members]
+      summary: Update a member record in Notion
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberUpdate"
+      responses:
+        "200":
+          description: Updated member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: archiveMember
+      tags: [members]
+      summary: Archive a member record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Archived
+        "404":
+          description: Member not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /members/summary:
+    get:
+      operationId: getMemberSummary
+      tags: [members]
+      summary: Get member record summary
+      parameters:
+        - name: databaseId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberSummaryStats"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +212,137 @@ components:
           type: string
       required:
         - status
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    NotionDatabase:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        url:
+          type: string
+        lastEditedTime:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - url
+        - lastEditedTime
+    MemberSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        url:
+          type: string
+        lastEditedTime:
+          type: string
+          format: date-time
+        gender:
+          type: ["string", "null"]
+        civilStatus:
+          type: ["string", "null"]
+        churchPosition:
+          type: ["string", "null"]
+      required:
+        - id
+        - name
+        - url
+        - lastEditedTime
+    Member:
+      allOf:
+        - $ref: "#/components/schemas/MemberSummary"
+        - $ref: "#/components/schemas/MemberInput"
+    MemberInput:
+      type: object
+      properties:
+        databaseId:
+          type: string
+        name:
+          type: string
+          minLength: 1
+        dateFilled:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        contactNumber:
+          type: ["string", "null"]
+        gender:
+          type: ["string", "null"]
+        birthDate:
+          type: ["string", "null"]
+        birthPlace:
+          type: ["string", "null"]
+        citizenship:
+          type: ["string", "null"]
+        civilStatus:
+          type: ["string", "null"]
+        spouse:
+          type: ["string", "null"]
+        children:
+          type: array
+          items:
+            type: string
+        father:
+          type: ["string", "null"]
+        mother:
+          type: ["string", "null"]
+        emergencyContactPerson:
+          type: ["string", "null"]
+        emergencyContactNumber:
+          type: ["string", "null"]
+        hisHerAddress:
+          type: ["string", "null"]
+        elementarySchool:
+          type: ["string", "null"]
+        highSchool:
+          type: ["string", "null"]
+        college:
+          type: ["string", "null"]
+        degreeCourse:
+          type: ["string", "null"]
+        dateOfSalvation:
+          type: ["string", "null"]
+        dateOfBaptism:
+          type: ["string", "null"]
+        dateOfMembership:
+          type: ["string", "null"]
+        churchPosition:
+          type: ["string", "null"]
+        ministryInterests:
+          type: array
+          items:
+            type: string
+        otherMinistry:
+          type: ["string", "null"]
+        specialSkills:
+          type: ["string", "null"]
+      required:
+        - name
+    MemberUpdate:
+      allOf:
+        - $ref: "#/components/schemas/MemberInput"
+    MemberSummaryStats:
+      type: object
+      properties:
+        total:
+          type: integer
+        recentlyUpdated:
+          type: integer
+        ministryInterestCount:
+          type: integer
+      required:
+        - total
+        - recentlyUpdated
+        - ministryInterestCount
 
