@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Church Member Records"
+description = "A secure member information system for International Heritage Baptist Church that creates, searches, updates, and stores personal, family, church, and ministry records in Notion."
+version = "1.0.0"
+id = "artifacts/church-member-records"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25294
+
+[services.development]
+run = "pnpm --filter @workspace/church-member-records run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/church-member-records", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/church-member-records/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25294"
+BASE_PATH = "/"
