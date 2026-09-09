@@ -1,20 +1,54 @@
-// Export your models here. Add one export per file
-// export * from "./posts";
-//
-// Each model/table should ideally be split into different files.
-// Each model/table should define a Drizzle table, insert schema, and types:
-//
-//   import { pgTable, text, serial } from "drizzle-orm/pg-core";
-//   import { createInsertSchema } from "drizzle-zod";
-//   import { z } from "zod/v4";
-//
-//   export const postsTable = pgTable("posts", {
-//     id: serial("id").primaryKey(),
-//     title: text("title").notNull(),
-//   });
-//
-//   export const insertPostSchema = createInsertSchema(postsTable).omit({ id: true });
-//   export type InsertPost = z.infer<typeof insertPostSchema>;
-//   export type Post = typeof postsTable.$inferSelect;
+import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
-export {}
+export const profiles = pgTable("profiles", {
+	id: uuid("id").primaryKey(),
+	fullName: text("full_name"),
+	role: text("role").notNull().default("admin"),
+	createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const auditLogs = pgTable("audit_logs", {
+	id: uuid("id").defaultRandom().primaryKey(),
+	actorId: uuid("actor_id").notNull(),
+	action: text("action").notNull(),
+	entityType: text("entity_type").notNull(),
+	entityId: text("entity_id"),
+	details: jsonb("details").$type<Record<string, unknown>>().notNull().default({}),
+	createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const members = pgTable("members", {
+	id: uuid("id").defaultRandom().primaryKey(),
+	name: text("name").notNull(),
+	dateFilled: text("date_filled"),
+	address: text("address"),
+	contactNumber: text("contact_number"),
+	gender: text("gender"),
+	birthDate: text("birth_date"),
+	birthPlace: text("birth_place"),
+	citizenship: text("citizenship"),
+	recentPicture: text("recent_picture"),
+	civilStatus: text("civil_status"),
+	spouse: text("spouse"),
+	children: text("children").array().notNull().default([]),
+	father: text("father"),
+	mother: text("mother"),
+	emergencyContactPerson: text("emergency_contact_person"),
+	emergencyContactNumber: text("emergency_contact_number"),
+	hisHerAddress: text("his_her_address"),
+	elementarySchool: text("elementary_school"),
+	highSchool: text("high_school"),
+	college: text("college"),
+	degreeCourse: text("degree_course"),
+	dateOfSalvation: text("date_of_salvation"),
+	dateOfBaptism: text("date_of_baptism"),
+	dateOfMembership: text("date_of_membership"),
+	churchPosition: text("church_position"),
+	ministryInterests: text("ministry_interests").array().notNull().default([]),
+	otherMinistry: text("other_ministry"),
+	specialSkills: text("special_skills"),
+	createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+	archivedAt: timestamp("archived_at", { withTimezone: true }),
+});

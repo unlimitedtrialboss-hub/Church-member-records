@@ -9,21 +9,18 @@ import {
   UpdateMemberBody,
   UpdateMemberParams,
 } from "@workspace/api-zod";
-import {
-  archiveMember,
-  createMember,
-  getMember,
-  getMemberSummary,
-  listMembers,
-  searchDatabases,
-  updateMember,
-  type MemberRecord,
-} from "../lib/notion";
+import { archiveMember, createMember, getMember, getMemberSummary, listMembers, updateMember } from "../lib/supabaseMembers";
+import type { MemberRecord } from "../lib/notion";
+import { requireAuth } from "../middleware/auth";
+import { writeAuditLog } from "../lib/audit";
+import type { AuthenticatedRequest } from "../middleware/auth";
 
 const router: IRouter = Router();
 
+router.use(requireAuth);
+
 function sendError(res: Parameters<NonNullable<Parameters<IRouter["get"]>[1]>>[1], error: unknown) {
-  const message = error instanceof Error ? error.message : "Something went wrong while contacting Notion.";
+  const message = error instanceof Error ? error.message : "Something went wrong while contacting Supabase.";
   res.status(message.includes("404") ? 404 : 502).json({ error: message });
 }
 
@@ -64,7 +61,6 @@ function memberFromBody(body: Record<string, unknown>): MemberRecord {
 
 function responseMember(page: Awaited<ReturnType<typeof getMember>>) {
   return {
-    id: page.id,
     ...page.member,
     url: page.url,
     lastEditedTime: page.last_edited_time,
@@ -72,18 +68,12 @@ function responseMember(page: Awaited<ReturnType<typeof getMember>>) {
 }
 
 router.get("/notion/databases", async (req, res) => {
-  const parsed = ListNotionDatabasesQueryParams.safeParse(req.query);
-  if (!parsed.success) return res.status(400).json({ error: "Invalid database search." });
-  try {
-    return res.json(await searchDatabases(parsed.data.query));
-  } catch (error) {
-    return sendError(res, error);
-  }
+  return res.json([{ id: "supabase-members", title: "Supabase member records", url: "/members", lastEditedTime: new Date().toISOString() }]);
 });
 
 router.get("/members/summary", async (req, res) => {
   const parsed = GetMemberSummaryQueryParams.safeParse(req.query);
-  if (!parsed.success) return res.status(400).json({ error: "A Notion database is required." });
+  if (!parsed.success) return res.status(400).json({ error: "The Supabase member registry is required." });
   try {
     return res.json(await getMemberSummary(parsed.data.databaseId));
   } catch (error) {
@@ -93,7 +83,7 @@ router.get("/members/summary", async (req, res) => {
 
 router.get("/members", async (req, res) => {
   const parsed = ListMembersQueryParams.safeParse(req.query);
-  if (!parsed.success) return res.status(400).json({ error: "A Notion database is required." });
+  if (!parsed.success) return res.status(400).json({ error: "The Supabase member registry is required." });
   try {
     return res.json(await listMembers(parsed.data.databaseId, parsed.data.query));
   } catch (error) {
@@ -103,11 +93,11 @@ router.get("/members", async (req, res) => {
 
 router.post("/members", async (req, res) => {
   const parsed = CreateMemberBody.safeParse(req.body);
-  if (!parsed.success || !parsed.data.databaseId) return res.status(400).json({ error: "A Notion database and member name are required." });
+  if (!parsed.success || !parsed.data.databaseId) return res.status(400).json({ error: "The Supabase registry and member name are required." });
   try {
     const page = await createMember(parsed.data.databaseId, memberFromBody(parsed.data));
+    await writeAuditLog({ actorId: (req as AuthenticatedRequest).auth!.id, action: "create_member", entityType: "member", entityId: page.id, details: { name: page.member.name } });
     return res.status(201).json({
-      id: page.id,
       ...page.member,
       url: page.url,
       lastEditedTime: page.last_edited_time,
@@ -120,10 +110,9 @@ router.post("/members", async (req, res) => {
 router.get("/members/:id", async (req, res) => {
   const params = GetMemberParams.safeParse(req.params);
   const query = GetMemberQueryParams.safeParse(req.query);
-  if (!params.success || !query.success) return res.status(400).json({ error: "A member and Notion database are required." });
+  if (!params.success || !query.success) return res.status(400).json({ error: "A member and Supabase registry are required." });
   try {
     const page = await getMember(params.data.id);
-    if (page.parent?.database_id && page.parent.database_id !== query.data.databaseId) return res.status(404).json({ error: "Member not found." });
     return res.json(responseMember(page));
   } catch (error) {
     return sendError(res, error);
@@ -133,9 +122,10 @@ router.get("/members/:id", async (req, res) => {
 router.patch("/members/:id", async (req, res) => {
   const params = UpdateMemberParams.safeParse(req.params);
   const body = UpdateMemberBody.safeParse(req.body);
-  if (!params.success || !body.success || !body.data.databaseId) return res.status(400).json({ error: "A Notion database and member name are required." });
+  if (!params.success || !body.success || !body.data.databaseId) return res.status(400).json({ error: "The Supabase registry and member name are required." });
   try {
     const page = await updateMember(params.data.id, memberFromBody(body.data));
+    await writeAuditLog({ actorId: (req as AuthenticatedRequest).auth!.id, action: "update_member", entityType: "member", entityId: page.id, details: { name: page.member.name } });
     return res.json(responseMember(page));
   } catch (error) {
     return sendError(res, error);
@@ -147,6 +137,7 @@ router.delete("/members/:id", async (req, res) => {
   if (!params.success) return res.status(400).json({ error: "A member is required." });
   try {
     await archiveMember(params.data.id);
+    await writeAuditLog({ actorId: (req as AuthenticatedRequest).auth!.id, action: "archive_member", entityType: "member", entityId: params.data.id });
     return res.status(204).send();
   } catch (error) {
     return sendError(res, error);

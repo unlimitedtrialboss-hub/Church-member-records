@@ -35,8 +35,12 @@ router.get("/storage/objects/*path", async (req: Request, res: Response) => {
     const response = await objectStorage.downloadObject(await objectStorage.getObjectEntityFile(`/objects/${path}`));
     res.status(response.status);
     response.headers.forEach((value, key) => res.setHeader(key, value));
-    if (response.body) Readable.fromWeb(response.body as ReadableStream<Uint8Array>).pipe(res);
-    else res.end();
+
+    if (response.body) {
+      return Readable.fromWeb(response.body as ReadableStream<Uint8Array>).pipe(res);
+    }
+
+    return res.end();
   } catch (error) {
     if (error instanceof ObjectNotFoundError) return res.status(404).json({ error: "Image not found." });
     req.log.error({ err: error }, "Error serving uploaded image");
