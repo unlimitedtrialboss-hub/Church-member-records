@@ -285,6 +285,8 @@ components:
           type: ["string", "null"]
         citizenship:
           type: ["string", "null"]
+        recentPicture:
+          type: ["string", "null"]
         civilStatus:
           type: ["string", "null"]
         spouse:

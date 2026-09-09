@@ -25,6 +25,8 @@ export interface MemberInput {
   /** @nullable */
   citizenship?: string | null;
   /** @nullable */
+  recentPicture?: string | null;
+  /** @nullable */
   civilStatus?: string | null;
   /** @nullable */
   spouse?: string | null;

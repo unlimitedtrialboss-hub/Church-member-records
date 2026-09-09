@@ -39,6 +39,7 @@ function memberFromBody(body: Record<string, unknown>): MemberRecord {
     birthDate: nullIfBlank(body.birthDate),
     birthPlace: nullIfBlank(body.birthPlace),
     citizenship: nullIfBlank(body.citizenship),
+    recentPicture: nullIfBlank(body.recentPicture),
     civilStatus: nullIfBlank(body.civilStatus),
     spouse: nullIfBlank(body.spouse),
     children: arrayValue(body.children),

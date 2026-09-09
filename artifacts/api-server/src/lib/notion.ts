@@ -16,6 +16,12 @@ type NotionProperty = {
   select?: { name?: string } | null;
   date?: { start?: string | null } | null;
   phone_number?: string | null;
+  files?: Array<{
+    name?: string;
+    type?: string;
+    external?: { url?: string };
+    file?: { url?: string };
+  }>;
   relation?: Array<{ id: string }>;
 };
 
@@ -55,6 +61,7 @@ export type MemberRecord = {
   birthDate: string | null;
   birthPlace: string | null;
   citizenship: string | null;
+  recentPicture: string | null;
   civilStatus: string | null;
   spouse: string | null;
   children: string[];
@@ -221,11 +228,23 @@ function propertyText(property: NotionProperty | undefined): string | null {
   return null;
 }
 
+function propertyFileUrl(property: NotionProperty | undefined) {
+  const file = property?.files?.[0];
+  return file?.external?.url ?? file?.file?.url ?? null;
+}
+
 function pagePropertyValue(page: NotionPage, ...names: string[]) {
   const name = Object.keys(page.properties).find((candidate) =>
     names.some((expected) => normalized(candidate) === normalized(expected)),
   );
   return propertyText(name ? page.properties[name] : undefined);
+}
+
+function pagePropertyFileUrl(page: NotionPage, ...names: string[]) {
+  const name = Object.keys(page.properties).find((candidate) =>
+    names.some((expected) => normalized(candidate) === normalized(expected)),
+  );
+  return propertyFileUrl(name ? page.properties[name] : undefined);
 }
 
 function propertyPayload(database: NotionDatabase, name: string, value: string | null | undefined) {
@@ -235,6 +254,9 @@ function propertyPayload(database: NotionDatabase, name: string, value: string |
   if (property.type === "rich_text") return { rich_text: value ? [{ type: "text", text: { content: value.slice(0, 1900) } }] : [] };
   if (property.type === "phone_number") return { phone_number: value || null };
   if (property.type === "date") return { date: value ? { start: value } : null };
+  if (property.type === "files") {
+    return value ? { files: [{ name: "Recent picture", type: "external", external: { url: value } }] } : { files: [] };
+  }
   if (property.type === "select") {
     if (!value) return { select: null };
     const options = property.select?.options?.map((option) => option.name).filter((option): option is string => Boolean(option)) ?? [];
@@ -258,6 +280,7 @@ function personalProperties(database: NotionDatabase, member: MemberRecord) {
     "Birth Date": member.birthDate,
     "Birth Place": member.birthPlace,
     Citizenship: member.citizenship,
+    "Recent Picture": member.recentPicture,
     "Civil Status": member.civilStatus,
     Spouse: member.spouse,
     Children: member.children.join("; "),
@@ -362,6 +385,7 @@ function emptyMember(name: string): MemberRecord {
     birthDate: null,
     birthPlace: null,
     citizenship: null,
+    recentPicture: null,
     civilStatus: null,
     spouse: null,
     children: [],
@@ -421,6 +445,7 @@ function parseMember(page: NotionPage, blocks: NotionBlock[], familyPage?: Notio
     const value = pagePropertyValue(page, property);
     if (value !== null) (member[field] as string | null) = value;
   }
+  member.recentPicture = pagePropertyFileUrl(page, "Recent Picture");
   const children = pagePropertyValue(page, "Children");
   if (children !== null) member.children = children.split(";").map((item) => item.trim()).filter(Boolean);
 
