@@ -48,7 +48,8 @@ export const ListMembersResponseItem = zod.object({
   "lastEditedTime": zod.coerce.date(),
   "gender": zod.string().nullish(),
   "civilStatus": zod.string().nullish(),
-  "churchPosition": zod.string().nullish()
+  "churchPosition": zod.string().nullish(),
+  "recentPicture": zod.string().nullish()
 })
 export const ListMembersResponse = zod.array(ListMembersResponseItem)
 
@@ -101,7 +102,8 @@ export const CreateMemberResponse = zod.object({
   "lastEditedTime": zod.coerce.date(),
   "gender": zod.string().nullish(),
   "civilStatus": zod.string().nullish(),
-  "churchPosition": zod.string().nullish()
+  "churchPosition": zod.string().nullish(),
+  "recentPicture": zod.string().nullish()
 }).and(zod.object({
   "databaseId": zod.string().optional(),
   "name": zod.string().min(1),
@@ -156,7 +158,8 @@ export const GetMemberResponse = zod.object({
   "lastEditedTime": zod.coerce.date(),
   "gender": zod.string().nullish(),
   "civilStatus": zod.string().nullish(),
-  "churchPosition": zod.string().nullish()
+  "churchPosition": zod.string().nullish(),
+  "recentPicture": zod.string().nullish()
 }).and(zod.object({
   "databaseId": zod.string().optional(),
   "name": zod.string().min(1),
@@ -242,7 +245,8 @@ export const UpdateMemberResponse = zod.object({
   "lastEditedTime": zod.coerce.date(),
   "gender": zod.string().nullish(),
   "civilStatus": zod.string().nullish(),
-  "churchPosition": zod.string().nullish()
+  "churchPosition": zod.string().nullish(),
+  "recentPicture": zod.string().nullish()
 }).and(zod.object({
   "databaseId": zod.string().optional(),
   "name": zod.string().min(1),

@@ -254,6 +254,8 @@ components:
           type: ["string", "null"]
         churchPosition:
           type: ["string", "null"]
+        recentPicture:
+          type: ["string", "null"]
       required:
         - id
         - name

@@ -44,7 +44,7 @@ router.patch("/admin/users/:id", async (req, res) => {
   if (requestedRole === "remove") {
     await db.delete(profiles).where(eq(profiles.id, targetId));
   } else {
-    await db.insert(profiles).values({ id: targetId, fullName: target.user.user_metadata?.full_name ?? target.user.email ?? null, role: "admin" }).onConflictDoUpdate({ target: profiles.id, set: { role: "admin", updatedAt: new Date() } });
+    await db.insert(profiles).values({ id: targetId, email: target.user.email ?? null, fullName: target.user.user_metadata?.full_name ?? target.user.email ?? null, role: "admin" }).onConflictDoUpdate({ target: profiles.id, set: { email: target.user.email ?? null, role: "admin", updatedAt: new Date() } });
   }
 
   await writeAuditLog({ actorId: actor.id, action: requestedRole === "remove" ? "remove_admin_access" : "grant_admin_access", entityType: "user", entityId: targetId, details: { email: target.user.email } });

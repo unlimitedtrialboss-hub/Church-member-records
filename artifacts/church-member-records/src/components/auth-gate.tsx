@@ -4,6 +4,7 @@ import { ArrowRight, LockKeyhole, ShieldCheck, UserRound, UsersRound } from 'luc
 import { setAuthTokenGetter } from '@workspace/api-client-react';
 import { getGetMemberSummaryQueryKey, useGetMemberSummary } from '@workspace/api-client-react';
 import { supabase } from '@/lib/supabase';
+import { apiUrl } from '@/lib/api';
 
 export type AuthUser = { id: string; email?: string; role: 'admin' | 'superadmin'; fullName: string | null };
 
@@ -31,15 +32,21 @@ export function AuthGate({ children }: { children: ReactNode }) {
         setLoading(false);
         return;
       }
-      const response = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${nextSession.access_token}` } });
-      if (!response.ok) {
+      try {
+        const response = await fetch(apiUrl('/api/auth/me'), { headers: { Authorization: `Bearer ${nextSession.access_token}` } });
+        if (!response.ok) {
+          setUser(null);
+          setError((await response.json().catch(() => ({}))).error ?? 'Your account is not authorized.');
+        } else {
+          setUser(await response.json());
+          setError('');
+        }
+      } catch (requestError) {
         setUser(null);
-        setError((await response.json().catch(() => ({}))).error ?? 'Your account is not authorized.');
-      } else {
-        setUser(await response.json());
-        setError('');
+        setError(requestError instanceof Error ? `Could not connect to the application server: ${requestError.message}` : 'Could not connect to the application server.');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     void client.auth.getSession().then(({ data }) => load(data.session));
     const { data } = client.auth.onAuthStateChange((_event, nextSession) => void load(nextSession));
@@ -92,7 +99,7 @@ export function AdminDashboard() {
     if (!isSuperadmin || !supabase) return;
     setUsersLoading(true);
     const session = (await supabase.auth.getSession()).data.session;
-    const response = await fetch('/api/admin/users', { headers: { Authorization: `Bearer ${session?.access_token ?? ''}` } });
+    const response = await fetch(apiUrl('/api/admin/users'), { headers: { Authorization: `Bearer ${session?.access_token ?? ''}` } });
     if (!response.ok) setUsersError((await response.json().catch(() => ({}))).error ?? 'Could not load users.');
     else { setManagedUsers(await response.json()); setUsersError(''); }
     setUsersLoading(false);
@@ -102,7 +109,7 @@ export function AdminDashboard() {
     if (!supabase || !window.confirm(role === 'admin' ? `Give ${target.email} admin access?` : `Remove admin access from ${target.email}?`)) return;
     setSavingUserId(target.id);
     const session = (await supabase.auth.getSession()).data.session;
-    const response = await fetch(`/api/admin/users/${target.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` }, body: JSON.stringify({ role }) });
+    const response = await fetch(apiUrl(`/api/admin/users/${target.id}`), { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` }, body: JSON.stringify({ role }) });
     if (!response.ok) setUsersError((await response.json().catch(() => ({}))).error ?? 'Could not change role.');
     else await loadUsers();
     setSavingUserId('');
@@ -119,7 +126,7 @@ export function AuditPanel() {
   useEffect(() => {
     if (user?.role !== 'superadmin' || !supabase) return;
     setLoading(true);
-    void supabase.auth.getSession().then(({ data }) => fetch('/api/admin/audit-logs', { headers: { Authorization: `Bearer ${data.session?.access_token ?? ''}` } })).then((response) => response.ok ? response.json() : []).then(setLogs).finally(() => setLoading(false));
+    void supabase.auth.getSession().then(({ data }) => fetch(apiUrl('/api/admin/audit-logs'), { headers: { Authorization: `Bearer ${data.session?.access_token ?? ''}` } })).then((response) => response.ok ? response.json() : []).then(setLogs).finally(() => setLoading(false));
   }, [user?.role]);
   if (user?.role !== 'superadmin') return null;
   return <section className="mx-auto mt-6 max-w-5xl rounded-xl border border-border bg-card p-5"><div className="mb-5"><h2 className="font-display text-xl">Admin activity</h2><p className="mt-1 text-xs text-muted-foreground">Recent member and role actions across the workspace.</p></div>{loading ? <p className="text-sm text-muted-foreground">Loading activity…</p> : logs.length === 0 ? <p className="text-sm text-muted-foreground">No activity recorded yet.</p> : <div className="grid gap-2">{logs.map((log) => <div key={log.id} className="flex flex-col gap-1 border-b border-border py-3 text-sm last:border-0 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">{log.action.replaceAll('_', ' ')}</p><p className="text-xs text-muted-foreground">{log.actorEmail} · {log.entityType}{log.entityId ? ` · ${log.entityId.slice(0, 8)}` : ''}</p></div><time className="text-xs text-muted-foreground">{new Date(log.createdAt).toLocaleString()}</time></div>)}</div>}</section>;

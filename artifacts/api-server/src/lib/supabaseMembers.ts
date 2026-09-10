@@ -14,6 +14,7 @@ function summary(row: typeof members.$inferSelect) {
     gender: row.gender,
     civilStatus: row.civilStatus,
     churchPosition: row.churchPosition,
+    recentPicture: row.recentPicture,
   };
 }
 
@@ -87,7 +88,12 @@ export async function listMembers(_databaseId: string, query?: string) {
     ? and(isNull(members.archivedAt), ilike(members.name, `%${query.trim()}%`))
     : isNull(members.archivedAt);
   const rows = await db.select().from(members).where(condition).orderBy(desc(members.updatedAt));
-  return rows.map(summary);
+  return rows.map(summary).sort(compareMemberNames);
+}
+
+function compareMemberNames(left: { name: string }, right: { name: string }) {
+  const surname = (name: string) => name.trim().split(/\s+/).filter(Boolean).at(-1) ?? '';
+  return surname(left.name).localeCompare(surname(right.name), undefined, { sensitivity: 'base' }) || left.name.localeCompare(right.name, undefined, { sensitivity: 'base' });
 }
 
 export async function getMemberSummary(_databaseId: string) {

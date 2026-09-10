@@ -31,6 +31,8 @@ export interface MemberSummary {
   civilStatus?: string | null;
   /** @nullable */
   churchPosition?: string | null;
+  /** @nullable */
+  recentPicture?: string | null;
 }
 
 export interface MemberInput {

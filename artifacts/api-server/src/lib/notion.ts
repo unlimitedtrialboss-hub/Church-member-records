@@ -591,7 +591,11 @@ export async function listMembers(databaseId: string, query?: string) {
     gender: pagePropertyValue(page, "Gender"),
     civilStatus: pagePropertyValue(page, "Civil Status"),
     churchPosition: null,
-  }));
+    recentPicture: pagePropertyFileUrl(page, "Recent Picture"),
+  })).sort((left, right) => {
+    const surname = (name: string) => name.trim().split(/\s+/).filter(Boolean).at(-1) ?? '';
+    return surname(left.name).localeCompare(surname(right.name), undefined, { sensitivity: 'base' }) || left.name.localeCompare(right.name, undefined, { sensitivity: 'base' });
+  });
 }
 
 export async function createMember(databaseId: string, member: MemberRecord) {

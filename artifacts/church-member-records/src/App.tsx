@@ -5,6 +5,7 @@ import { Link, Route, Router as WouterRouter, Switch, useLocation, useParams } f
 import {
   Archive,
   ArrowLeft,
+  Camera,
   BookOpen,
   Check,
   ChevronDown,
@@ -17,6 +18,8 @@ import {
   Loader2,
   Menu,
   Search,
+  ArrowDownAZ,
+  Clock3,
   ShieldCheck,
   Sparkles,
   UsersRound,
@@ -44,12 +47,13 @@ import { DocumentCapture } from '@/components/document-capture';
 import { AdminDashboard, AuditPanel, AuthGate } from '@/components/auth-gate';
 import { supabase } from '@/lib/supabase';
 import NotFound from '@/pages/not-found';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const queryClient = new QueryClient();
 
 type Database = { id: string; title: string; url: string; lastEditedTime: string };
 const SUPABASE_DATABASE: Database = { id: 'supabase-members', title: 'Supabase member records', url: '/members', lastEditedTime: new Date().toISOString() };
-type Summary = { id: string; name: string; url: string; lastEditedTime: string; gender?: string | null; civilStatus?: string | null; churchPosition?: string | null };
+type Summary = { id: string; name: string; url: string; lastEditedTime: string; gender?: string | null; civilStatus?: string | null; churchPosition?: string | null; recentPicture?: string | null };
 
 const blankForm: MemberInput = {
   name: '',
@@ -61,6 +65,7 @@ const blankForm: MemberInput = {
   birthDate: '',
   birthPlace: '',
   citizenship: 'Filipino',
+  recentPicture: '',
   civilStatus: '',
   spouse: '',
   children: [],
@@ -101,6 +106,10 @@ function initials(name: string) {
   return name.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'IH';
 }
 
+function surname(name: string) {
+  return name.trim().split(/\s+/).filter(Boolean).at(-1) ?? '';
+}
+
 function Button({ children, variant = 'primary', className = '', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'quiet' | 'outline' | 'danger' }) {
   const variants = {
     primary: 'bg-primary text-primary-foreground hover:brightness-110 shadow-[0_6px_18px_rgba(30,90,76,.15)]',
@@ -133,7 +142,7 @@ function Shell({ children, selectedDatabase, onClearDatabase }: { children: Reac
     { href: '/admin', label: 'Dashboard', icon: ShieldCheck },
     { href: '/members/new', label: 'Add member', icon: FilePlus2 },
   ];
-  return <div className="grain min-h-[100dvh] bg-background">
+  return <div className="grain min-h-[100dvh] overflow-x-hidden bg-background">
     <aside className={`fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col bg-sidebar px-4 py-5 text-sidebar-foreground transition-transform duration-300 md:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
       <div className="mb-9 flex items-center gap-3 px-2">
         <div className="grid size-10 place-items-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground shadow-lg"><Landmark size={21} /></div>
@@ -184,10 +193,14 @@ function DatabasePicker({ databases, isLoading, onSelect, error }: { databases?:
 function Home() {
   const selectedDatabase = SUPABASE_DATABASE;
   const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<'name' | 'recent'>('name');
   const params = useMemo(() => ({ databaseId: selectedDatabase?.id ?? '', ...(search ? { query: search } : {}) }), [selectedDatabase?.id, search]);
   const membersQuery = useListMembers(params, { query: { queryKey: getListMembersQueryKey(params), enabled: Boolean(selectedDatabase?.id) } });
   const summaryQuery = useGetMemberSummary({ databaseId: selectedDatabase?.id ?? '' }, { query: { queryKey: getGetMemberSummaryQueryKey({ databaseId: selectedDatabase?.id ?? '' }), enabled: Boolean(selectedDatabase?.id) } });
   const stats = summaryQuery.data;
+  const members = useMemo(() => [...(membersQuery.data ?? [])].sort((left, right) => sort === 'name'
+    ? surname(left.name).localeCompare(surname(right.name), undefined, { sensitivity: 'base' }) || left.name.localeCompare(right.name, undefined, { sensitivity: 'base' })
+    : new Date(right.lastEditedTime).getTime() - new Date(left.lastEditedTime).getTime()), [membersQuery.data, sort]);
   return <Shell selectedDatabase={selectedDatabase} onClearDatabase={() => undefined}>
     <div className="animate-rise">
       <div className="mb-8 flex flex-col justify-between gap-5 lg:flex-row lg:items-end"><div><div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[.15em] text-primary"><span className="size-2 rounded-full bg-accent" />Member registry</div><h1 className="font-display text-5xl leading-none tracking-tight md:text-6xl">The people<br /><span className="text-accent">behind the pews.</span></h1><p className="mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground">A living directory for International Heritage Baptist Church — Dagupan City.</p></div><Link href="/members/new" data-testid="link-add-member-hero" className="inline-flex w-fit items-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-[0_6px_18px_rgba(30,90,76,.15)] transition-all hover:brightness-110"><FilePlus2 size={17} />Add a member</Link></div>
@@ -196,13 +209,13 @@ function Home() {
         { label: 'Updated this month', value: stats?.recentlyUpdated ?? 0, icon: Sparkles, color: 'bg-secondary text-secondary-foreground' },
         { label: 'Serving interests', value: stats?.ministryInterestCount ?? 0, icon: HeartHandshake, color: 'bg-accent/15 text-accent-foreground' },
       ].map(({ label, value, icon: Icon, color }, index) => <div key={label} className={`animate-rise-${index + 1} animate-rise rounded-xl border border-border bg-card p-4 shadow-[0_8px_25px_rgba(38,69,61,.035)]`}><div className="flex items-start justify-between"><p className="text-xs font-semibold text-muted-foreground">{label}</p><div className={`grid size-8 place-items-center rounded-lg ${color}`}><Icon size={16} /></div></div><p data-testid={`text-stat-${label.toLowerCase().replaceAll(' ', '-')}`} className="mt-4 font-display text-4xl">{summaryQuery.isLoading ? '—' : value}</p></div>)}</div>
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-display text-2xl">Member directory</h2><p className="mt-1 text-xs text-muted-foreground">{membersQuery.data?.length ?? 0} records in {selectedDatabase.title}</p></div><div className="relative w-full sm:w-72"><Search size={16} className="absolute left-3 top-3 text-muted-foreground" /><input value={search} onChange={(e) => setSearch(e.target.value)} data-testid="input-search-members" placeholder="Search by name..." className="h-10 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15" /></div></div>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-display text-2xl">Member directory</h2><p className="mt-1 text-xs text-muted-foreground">{membersQuery.data?.length ?? 0} records in {selectedDatabase.title}</p></div><div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row"><div className="relative w-full sm:w-72"><Search size={16} className="absolute left-3 top-3 text-muted-foreground" /><input value={search} onChange={(e) => setSearch(e.target.value)} data-testid="input-search-members" placeholder="Search by name..." className="h-10 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15" /></div><label className="relative flex h-10 items-center gap-2 rounded-lg border border-input bg-card px-3 text-xs font-semibold text-muted-foreground"><span className="sr-only">Sort members</span>{sort === 'name' ? <ArrowDownAZ size={15} className="text-primary" /> : <Clock3 size={15} className="text-primary" />}<select value={sort} onChange={(event) => setSort(event.target.value as 'name' | 'recent')} aria-label="Sort members" className="appearance-none bg-transparent pr-5 outline-none"><option value="name">Last name</option><option value="recent">Recently updated</option></select><ChevronDown size={13} className="pointer-events-none absolute right-2" /></label></div></div>
       <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-[0_10px_35px_rgba(38,69,61,.04)]">
         <div className="hidden grid-cols-[minmax(220px,1.5fr)_1fr_1fr_1fr_32px] gap-4 border-b border-border bg-muted/45 px-5 py-3 text-[10px] font-bold uppercase tracking-[.15em] text-muted-foreground md:grid"><span>Name</span><span>Gender</span><span>Civil status</span><span>Position</span><span /></div>
         {membersQuery.isLoading && <div className="grid gap-1 p-3">{[1, 2, 3, 4].map((item) => <div key={item} className="skeleton h-[74px] rounded-xl" />)}</div>}
         {membersQuery.isError && <div className="p-12 text-center"><X className="mx-auto text-destructive" size={26} /><p className="mt-3 text-sm font-semibold">The directory could not be loaded</p><p className="mt-1 text-xs text-muted-foreground">Check your connection and try again.</p></div>}
         {!membersQuery.isLoading && !membersQuery.isError && (membersQuery.data?.length ?? 0) === 0 && <div className="p-14 text-center"><div className="mx-auto grid size-12 place-items-center rounded-2xl bg-secondary text-secondary-foreground"><UsersRound size={22} /></div><p className="mt-4 font-display text-2xl">{search ? 'No one by that name' : 'Your directory is waiting'}</p><p className="mx-auto mt-2 max-w-sm text-xs leading-relaxed text-muted-foreground">{search ? 'Try another spelling or clear your search.' : 'Add your first member record and begin building a clearer picture of your congregation.'}</p>{!search && <Link href="/members/new" data-testid="link-add-member-empty" className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground"><FilePlus2 size={15} />Add first member</Link>}</div>}
-        <div className="divide-y divide-border">{(membersQuery.data as Summary[] | undefined)?.map((member) => <Link href={`/members/${member.id}`} key={member.id} data-testid={`link-member-${member.id}`} className="group grid grid-cols-1 gap-3 px-5 py-4 transition-colors hover:bg-primary/[.035] md:grid-cols-[minmax(220px,1.5fr)_1fr_1fr_1fr_32px] md:items-center md:gap-4"><div className="flex items-center gap-3"><div className="grid size-10 shrink-0 place-items-center rounded-xl bg-secondary text-xs font-bold text-secondary-foreground">{initials(member.name)}</div><div className="min-w-0"><p data-testid={`text-member-name-${member.id}`} className="truncate text-sm font-semibold">{member.name}</p><p className="mt-1 text-[11px] text-muted-foreground md:hidden">{member.churchPosition || member.civilStatus || 'Member record'}</p></div></div><span className="hidden text-xs text-muted-foreground md:block">{member.gender || '—'}</span><span className="hidden text-xs text-muted-foreground md:block">{member.civilStatus || '—'}</span><span className="hidden text-xs text-muted-foreground md:block">{member.churchPosition || 'Member'}</span><ChevronDown className="-rotate-90 text-muted-foreground transition-transform group-hover:translate-x-1" size={17} /></Link>)}</div>
+        <div className="divide-y divide-border">{(members as Summary[]).map((member) => <Link href={`/members/${member.id}`} key={member.id} data-testid={`link-member-${member.id}`} className="group grid grid-cols-1 gap-3 px-5 py-4 transition-colors hover:bg-primary/[.035] md:grid-cols-[minmax(220px,1.5fr)_1fr_1fr_1fr_32px] md:items-center md:gap-4"><div className="flex items-center gap-3"><Avatar className="size-10 rounded-xl"><AvatarImage src={member.recentPicture ?? undefined} alt={`${member.name} profile`} /><AvatarFallback className="rounded-xl bg-secondary text-xs font-bold text-secondary-foreground">{initials(member.name)}</AvatarFallback></Avatar><div className="min-w-0"><p data-testid={`text-member-name-${member.id}`} className="truncate text-sm font-semibold">{member.name}</p><p className="mt-1 text-[11px] text-muted-foreground md:hidden">{member.churchPosition || member.civilStatus || 'Member record'}</p></div></div><span className="hidden text-xs text-muted-foreground md:block">{member.gender || '—'}</span><span className="hidden text-xs text-muted-foreground md:block">{member.civilStatus || '—'}</span><span className="hidden text-xs text-muted-foreground md:block">{member.churchPosition || 'Member'}</span><ChevronDown className="-rotate-90 text-muted-foreground transition-transform group-hover:translate-x-1" size={17} /></Link>)}</div>
       </div>
       <p className="mt-5 text-center text-[11px] text-muted-foreground">Synced with Supabase</p>
     </div>
@@ -227,6 +240,7 @@ function MemberForm({ memberId, database, initial }: { memberId?: string; databa
     birthDate: dateOnly(initial?.birthDate),
     birthPlace: text(initial?.birthPlace),
     citizenship: text(initial?.citizenship) || 'Filipino',
+    recentPicture: text(initial?.recentPicture),
     civilStatus: text(initial?.civilStatus),
     spouse: text(initial?.spouse),
     father: text(initial?.father),
@@ -254,6 +268,8 @@ function MemberForm({ memberId, database, initial }: { memberId?: string; databa
   const update = useUpdateMember();
   const archive = useArchiveMember();
   const isPending = create.isPending || update.isPending;
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState('');
   const setField = (key: keyof MemberInput, value: string) => setForm((current) => ({ ...current, [key]: value }));
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -279,9 +295,69 @@ function MemberForm({ memberId, database, initial }: { memberId?: string; databa
     archive.mutate({ id: memberId }, { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListMembersQueryKey({ databaseId: database?.id ?? '' }) }); queryClient.invalidateQueries({ queryKey: getGetMemberSummaryQueryKey({ databaseId: database?.id ?? '' }) }); queryClient.invalidateQueries({ queryKey: getGetMemberQueryKey(memberId, { databaseId: database?.id ?? '' }) }); setLocation('/'); } });
   };
   const applyScannedFields = (fields: Partial<MemberInput>) => setForm((current) => ({ ...current, ...fields }));
+  const uploadPhoto = async (file?: File) => {
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setPhotoError('Choose a JPEG, PNG, or WebP image.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setPhotoError('Choose an image up to 10 MB.');
+      return;
+    }
+    setPhotoUploading(true);
+    setPhotoError('');
+    try {
+      const photoData = await new Promise<string>((resolve, reject) => {
+        const image = new Image();
+        const objectUrl = URL.createObjectURL(file);
+        image.onload = () => {
+          URL.revokeObjectURL(objectUrl);
+          const maxDimension = 1600;
+          const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+          canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+          const context = canvas.getContext('2d');
+          if (!context) return reject(new Error('Could not process the member photo.'));
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          const result = canvas.toDataURL('image/jpeg', 0.8);
+          result ? resolve(result) : reject(new Error('Could not process the member photo.'));
+        };
+        image.onerror = () => {
+          URL.revokeObjectURL(objectUrl);
+          reject(new Error('Could not read the member photo.'));
+        };
+        image.src = objectUrl;
+      });
+      setField('recentPicture', photoData);
+    } catch (error) {
+      setPhotoError(error instanceof Error ? error.message : 'Could not read the member photo.');
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
   const input = (key: keyof MemberInput) => ({ value: text(form[key]), onChange: (event: ChangeEvent<HTMLInputElement>) => setField(key, event.target.value) });
   return <form onSubmit={submit} className="animate-rise">
-    <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><Link href="/" data-testid="link-back-directory" className="mb-4 inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-primary"><ArrowLeft size={14} />Back to directory</Link><div className="flex items-center gap-3"><div className="grid size-12 place-items-center rounded-2xl bg-secondary text-secondary-foreground"><CircleUserRound size={25} /></div><div><p className="text-xs font-bold uppercase tracking-[.15em] text-primary">{memberId ? 'Member record' : 'New record'}</p><h1 className="font-display text-4xl leading-tight md:text-5xl">{memberId ? (form.name || 'Edit member') : 'Welcome someone new.'}</h1></div></div></div><div className="flex items-center gap-2">{memberId && <Button type="button" variant="danger" onClick={archiveRecord} disabled={archive.isPending} data-testid="button-archive-member">{archive.isPending ? <Loader2 className="animate-spin" size={15} /> : <Archive size={15} />}Archive</Button>}<Button type="submit" disabled={isPending || !form.name.trim()} data-testid="button-save-member">{isPending ? <Loader2 className="animate-spin" size={16} /> : saved ? <Check size={16} /> : null}{isPending ? 'Saving…' : saved ? 'Saved' : memberId ? 'Save changes' : 'Submit member'}</Button></div></div><div className="mb-7"><DocumentCapture onExtract={applyScannedFields} /></div>
+    <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><Link href="/" data-testid="link-back-directory" className="mb-4 inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-primary"><ArrowLeft size={14} />Back to directory</Link><div className="flex items-center gap-3"><Avatar className="size-12 rounded-2xl"><AvatarImage src={text(form.recentPicture) || undefined} alt="Member profile" /><AvatarFallback className="rounded-2xl bg-secondary text-secondary-foreground"><CircleUserRound size={25} /></AvatarFallback></Avatar><div><p className="text-xs font-bold uppercase tracking-[.15em] text-primary">{memberId ? 'Member record' : 'New record'}</p><h1 className="font-display text-4xl leading-tight md:text-5xl">{memberId ? (form.name || 'Edit member') : 'Welcome someone new.'}</h1></div></div></div><div className="flex items-center gap-2">{memberId && <Button type="button" variant="danger" onClick={archiveRecord} disabled={archive.isPending} data-testid="button-archive-member">{archive.isPending ? <Loader2 className="animate-spin" size={15} /> : <Archive size={15} />}Archive</Button>}<Button type="submit" disabled={isPending || !form.name.trim()} data-testid="button-save-member">{isPending ? <Loader2 className="animate-spin" size={16} /> : saved ? <Check size={16} /> : null}{isPending ? 'Saving…' : saved ? 'Saved' : memberId ? 'Save changes' : 'Submit member'}</Button></div></div><div className="mb-7"><DocumentCapture onExtract={applyScannedFields} /></div>
+    <div className="mb-7 flex flex-col gap-4 rounded-xl border border-dashed border-primary/30 bg-primary/[.035] p-4 sm:flex-row sm:items-center">
+      <Avatar className="size-20 rounded-xl">
+        <AvatarImage src={text(form.recentPicture) || undefined} alt="Member profile preview" />
+        <AvatarFallback className="rounded-xl bg-secondary text-secondary-foreground">
+          <Camera size={24} />
+        </AvatarFallback>
+      </Avatar>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold">Insert the member photo here</p>
+        <p className="mt-1 text-xs text-muted-foreground">Upload a clear JPEG, PNG, or WebP image up to 10 MB. It will be saved with this member record.</p>
+        {photoError && <p role="alert" className="mt-2 text-xs text-destructive">{photoError}</p>}
+      </div>
+      <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-3.5 py-2.5 text-xs font-semibold text-primary-foreground hover:brightness-110 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50">
+        <Camera size={15} />
+        {photoUploading ? 'Uploading…' : 'Choose photo'}
+        <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={photoUploading} onChange={(event) => { void uploadPhoto(event.target.files?.[0]); event.currentTarget.value = ''; }} />
+      </label>
+    </div>
      <div className="mb-7 rounded-xl border border-primary/15 bg-primary/[.045] px-4 py-3 text-xs text-primary"><div className="flex items-center gap-2 font-semibold"><ShieldCheck size={15} /> A respectful record, kept with care.</div><p className="mt-1 pl-5 text-primary/70">Fill what you know today. You can always return and complete the story later.</p></div>
     {(create.isError || update.isError) && <div role="alert" className="mb-7 rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm text-destructive"><p className="font-semibold">This record could not be saved.</p><p className="mt-1 text-xs">{(create.error ?? update.error) instanceof Error ? (create.error ?? update.error)?.message : 'Please check the Supabase connection and try again.'}</p></div>}
     <div className="rounded-2xl border border-border bg-card p-5 shadow-[0_10px_35px_rgba(38,69,61,.04)] md:p-8">

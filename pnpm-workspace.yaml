@@ -155,4 +155,4 @@ overrides:
 
 allowBuilds:
   esbuild: false
-  tesseract.js: set this to true or false
+  tesseract.js: true
