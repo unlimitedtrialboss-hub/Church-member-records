@@ -1,8 +1,8 @@
-import { Router, type Request, type Response } from "express";
+import { Router, type Response } from "express";
 
 const router = Router();
 
-router.get("/healthz", (_req: Request, res: Response) => {
+router.get("/healthz", (_req: unknown, res: Response) => {
   res.json({ status: "ok" });
 });
 
