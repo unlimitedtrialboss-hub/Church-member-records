@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import dotenv from "dotenv";
-import app from "./app";
-import { logger } from "./lib/logger";
+import app from "./app.js";
+import { logger } from "./lib/logger.js";
 
 function loadRepoEnv() {
   let currentDir = process.cwd();

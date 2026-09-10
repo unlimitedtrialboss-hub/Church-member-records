@@ -1,7 +1,7 @@
 import { and, desc, eq, ilike, isNull } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { members } from "@workspace/db/schema";
-import type { MemberRecord } from "./notion";
+import type { MemberRecord } from "./notion.js";
 
 const databaseId = "supabase-members";
 

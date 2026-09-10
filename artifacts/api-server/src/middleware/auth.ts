@@ -1,7 +1,7 @@
 import type { RequestHandler } from "express";
 import { eq } from "drizzle-orm";
 import { db, profiles } from "@workspace/db";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../lib/supabase.js";
 
 export type AuthenticatedRequest = Parameters<RequestHandler>[0] & {
   auth?: { id: string; email?: string; role: "admin" | "superadmin"; fullName: string | null };

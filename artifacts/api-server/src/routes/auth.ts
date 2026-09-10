@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { requireAuth, type AuthenticatedRequest } from "../middleware/auth";
+import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 
 const router: IRouter = Router();
 

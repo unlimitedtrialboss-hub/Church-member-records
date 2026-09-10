@@ -9,11 +9,11 @@ import {
   UpdateMemberBody,
   UpdateMemberParams,
 } from "@workspace/api-zod";
-import { archiveMember, createMember, getMember, getMemberSummary, listMembers, updateMember } from "../lib/supabaseMembers";
-import type { MemberRecord } from "../lib/notion";
-import { requireAuth } from "../middleware/auth";
-import { writeAuditLog } from "../lib/audit";
-import type { AuthenticatedRequest } from "../middleware/auth";
+import { archiveMember, createMember, getMember, getMemberSummary, listMembers, updateMember } from "../lib/supabaseMembers.js";
+import type { MemberRecord } from "../lib/notion.js";
+import { requireAuth } from "../middleware/auth.js";
+import { writeAuditLog } from "../lib/audit.js";
+import type { AuthenticatedRequest } from "../middleware/auth.js";
 
 const router: IRouter = Router();
 
