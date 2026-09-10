@@ -1,4 +1,4 @@
-import { Router, type Response } from "express";
+import { Router, type Request, type Response } from "express";
 import {
   CreateMemberBody,
   GetMemberParams,
@@ -8,7 +8,7 @@ import {
   ListNotionDatabasesQueryParams,
   UpdateMemberBody,
   UpdateMemberParams,
-} from "@workspace/api-zod";
+} from "../../../../lib/api-zod/src/generated/api.js";
 import { archiveMember, createMember, getMember, getMemberSummary, listMembers, updateMember } from "../lib/supabaseMembers.js";
 import type { MemberRecord } from "../lib/notion.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -67,11 +67,11 @@ function responseMember(page: Awaited<ReturnType<typeof getMember>>) {
   };
 }
 
-router.get("/notion/databases", async (req, res) => {
+router.get("/notion/databases", async (_req: Request, res: Response) => {
   return res.json([{ id: "supabase-members", title: "Supabase member records", url: "/members", lastEditedTime: new Date().toISOString() }]);
 });
 
-router.get("/members/summary", async (req, res) => {
+router.get("/members/summary", async (req: Request, res: Response) => {
   const parsed = GetMemberSummaryQueryParams.safeParse(req.query);
   if (!parsed.success) return res.status(400).json({ error: "The Supabase member registry is required." });
   try {
@@ -81,7 +81,7 @@ router.get("/members/summary", async (req, res) => {
   }
 });
 
-router.get("/members", async (req, res) => {
+router.get("/members", async (req: Request, res: Response) => {
   const parsed = ListMembersQueryParams.safeParse(req.query);
   if (!parsed.success) return res.status(400).json({ error: "The Supabase member registry is required." });
   try {
@@ -91,7 +91,7 @@ router.get("/members", async (req, res) => {
   }
 });
 
-router.post("/members", async (req, res) => {
+router.post("/members", async (req: Request, res: Response) => {
   const parsed = CreateMemberBody.safeParse(req.body);
   if (!parsed.success || !parsed.data.databaseId) return res.status(400).json({ error: "The Supabase registry and member name are required." });
   try {
@@ -107,7 +107,7 @@ router.post("/members", async (req, res) => {
   }
 });
 
-router.get("/members/:id", async (req, res) => {
+router.get("/members/:id", async (req: Request, res: Response) => {
   const params = GetMemberParams.safeParse(req.params);
   const query = GetMemberQueryParams.safeParse(req.query);
   if (!params.success || !query.success) return res.status(400).json({ error: "A member and Supabase registry are required." });
@@ -119,7 +119,7 @@ router.get("/members/:id", async (req, res) => {
   }
 });
 
-router.patch("/members/:id", async (req, res) => {
+router.patch("/members/:id", async (req: Request, res: Response) => {
   const params = UpdateMemberParams.safeParse(req.params);
   const body = UpdateMemberBody.safeParse(req.body);
   if (!params.success || !body.success || !body.data.databaseId) return res.status(400).json({ error: "The Supabase registry and member name are required." });
@@ -132,7 +132,7 @@ router.patch("/members/:id", async (req, res) => {
   }
 });
 
-router.delete("/members/:id", async (req, res) => {
+router.delete("/members/:id", async (req: Request, res: Response) => {
   const params = GetMemberParams.safeParse(req.params);
   if (!params.success) return res.status(400).json({ error: "A member is required." });
   try {
