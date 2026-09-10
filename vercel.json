@@ -1,0 +1,8 @@
+{
+  "buildCommand": "pnpm --filter @workspace/church-member-records run build",
+  "outputDirectory": "artifacts/church-member-records/dist/public",
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
