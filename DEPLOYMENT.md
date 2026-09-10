@@ -38,6 +38,8 @@ Render supplies `PORT` automatically. Copy the Render service URL, for example `
 
 Create a Vercel project from the same repository. Set the project root to `artifacts/church-member-records`.
 
+> If Vercel shows the root directory, build command, and output directory already filled in, leave them as-is. In this monorepo, those values are intentionally pre-populated and are valid for the frontend app. Click Deploy instead of trying to rewrite them.
+
 - Build command: `cd ../.. && pnpm install --frozen-lockfile && pnpm --filter @workspace/church-member-records run build`
 - Output directory: `dist/public`
 
