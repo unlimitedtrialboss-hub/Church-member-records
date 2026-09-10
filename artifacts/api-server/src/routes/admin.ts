@@ -1,11 +1,11 @@
-import { Router, type IRouter } from "express";
+import { Router } from "express";
 import { desc, eq } from "drizzle-orm";
 import { auditLogs, db, profiles } from "@workspace/db";
 import { supabase } from "../lib/supabase.js";
 import { requireAuth, requireSuperadmin, type AuthenticatedRequest } from "../middleware/auth.js";
 import { writeAuditLog } from "../lib/audit.js";
 
-const router: IRouter = Router();
+const router = Router();
 
 router.use(requireAuth, requireSuperadmin);
 

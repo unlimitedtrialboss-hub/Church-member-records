@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type Response } from "express";
 import {
   CreateMemberBody,
   GetMemberParams,
@@ -15,11 +15,11 @@ import { requireAuth } from "../middleware/auth.js";
 import { writeAuditLog } from "../lib/audit.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
 
-const router: IRouter = Router();
+const router = Router();
 
 router.use(requireAuth);
 
-function sendError(res: Parameters<NonNullable<Parameters<IRouter["get"]>[1]>>[1], error: unknown) {
+function sendError(res: Response, error: unknown) {
   const message = error instanceof Error ? error.message : "Something went wrong while contacting Supabase.";
   res.status(message.includes("404") ? 404 : 502).json({ error: message });
 }

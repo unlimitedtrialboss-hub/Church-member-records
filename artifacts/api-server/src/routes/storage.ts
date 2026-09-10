@@ -1,8 +1,8 @@
 import { Readable } from "node:stream";
-import { Router, type IRouter, type Request, type Response } from "express";
+import { Router, type Request, type Response } from "express";
 import { ObjectNotFoundError, ObjectStorageService } from "../lib/objectStorage.js";
 
-const router: IRouter = Router();
+const router = Router();
 const objectStorage = new ObjectStorageService();
 
 router.post("/storage/uploads/request-url", async (req: Request, res: Response) => {
