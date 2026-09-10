@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import { desc, eq } from "drizzle-orm";
 import { auditLogs, db, profiles } from "@workspace/db";
 import { supabase } from "../lib/supabase.js";
@@ -9,7 +9,7 @@ const router = Router();
 
 router.use(requireAuth, requireSuperadmin);
 
-router.get("/admin/users", async (_req, res) => {
+router.get("/admin/users", async (_req: Request, res: Response) => {
   const { data, error } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
   if (error) return res.status(502).json({ error: error.message });
   const profileRows = await db.select().from(profiles);
@@ -23,7 +23,7 @@ router.get("/admin/users", async (_req, res) => {
   })));
 });
 
-router.get("/admin/audit-logs", async (_req, res) => {
+router.get("/admin/audit-logs", async (_req: Request, res: Response) => {
   const { data, error } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
   if (error) return res.status(502).json({ error: error.message });
   const emails = new Map(data.users.map((user) => [user.id, user.email]));
@@ -31,7 +31,7 @@ router.get("/admin/audit-logs", async (_req, res) => {
   return res.json(logs.map((log) => ({ ...log, actorEmail: emails.get(log.actorId) ?? "Unknown user" })));
 });
 
-router.patch("/admin/users/:id", async (req, res) => {
+router.patch("/admin/users/:id", async (req: Request<{ id: string }>, res: Response) => {
   const actor = (req as AuthenticatedRequest).auth;
   const targetId = req.params.id;
   const requestedRole = req.body?.role;
