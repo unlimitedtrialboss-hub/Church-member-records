@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import {
   CreateMemberBody,
   GetMemberParams,
@@ -11,27 +11,20 @@ import {
 } from "../../../../lib/api-zod/src/generated/api.js";
 import { archiveMember, createMember, getMember, getMemberSummary, listMembers, updateMember } from "../lib/supabaseMembers.js";
 import type { MemberRecord } from "../lib/notion.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { writeAuditLog } from "../lib/audit.js";
 
 const router = Router();
 
-type MemberRequest = {
+type MemberRequest = AuthenticatedRequest & {
   query: Record<string, unknown>;
   body: Record<string, unknown>;
   params: Record<string, string>;
-  auth?: { id: string };
-};
-
-type MemberResponse = {
-  status(code: number): MemberResponse;
-  json(body: unknown): MemberResponse;
-  send(): MemberResponse;
 };
 
 router.use(requireAuth);
 
-function sendError(res: MemberResponse, error: unknown) {
+function sendError(res: Response, error: unknown) {
   const message = error instanceof Error ? error.message : "Something went wrong while contacting Supabase.";
   res.status(message.includes("404") ? 404 : 502).json({ error: message });
 }
@@ -79,11 +72,11 @@ function responseMember(page: Awaited<ReturnType<typeof getMember>>) {
   };
 }
 
-router.get("/notion/databases", async (_req: MemberRequest, res: MemberResponse) => {
+router.get("/notion/databases", async (_req: Request, res: Response) => {
   return res.json([{ id: "supabase-members", title: "Supabase member records", url: "/members", lastEditedTime: new Date().toISOString() }]);
 });
 
-router.get("/members/summary", async (req: MemberRequest, res: MemberResponse) => {
+router.get("/members/summary", async (req: MemberRequest, res: Response) => {
   const parsed = GetMemberSummaryQueryParams.safeParse(req.query);
   if (!parsed.success) return res.status(400).json({ error: "The Supabase member registry is required." });
   try {
@@ -93,7 +86,7 @@ router.get("/members/summary", async (req: MemberRequest, res: MemberResponse) =
   }
 });
 
-router.get("/members", async (req: MemberRequest, res: MemberResponse) => {
+router.get("/members", async (req: MemberRequest, res: Response) => {
   const parsed = ListMembersQueryParams.safeParse(req.query);
   if (!parsed.success) return res.status(400).json({ error: "The Supabase member registry is required." });
   try {
@@ -103,7 +96,7 @@ router.get("/members", async (req: MemberRequest, res: MemberResponse) => {
   }
 });
 
-router.post("/members", async (req: MemberRequest, res: MemberResponse) => {
+router.post("/members", async (req: MemberRequest, res: Response) => {
   const parsed = CreateMemberBody.safeParse(req.body);
   if (!parsed.success || !parsed.data.databaseId) return res.status(400).json({ error: "The Supabase registry and member name are required." });
   try {
@@ -119,7 +112,7 @@ router.post("/members", async (req: MemberRequest, res: MemberResponse) => {
   }
 });
 
-router.get("/members/:id", async (req: MemberRequest, res: MemberResponse) => {
+router.get("/members/:id", async (req: MemberRequest, res: Response) => {
   const params = GetMemberParams.safeParse(req.params);
   const query = GetMemberQueryParams.safeParse(req.query);
   if (!params.success || !query.success) return res.status(400).json({ error: "A member and Supabase registry are required." });
@@ -131,7 +124,7 @@ router.get("/members/:id", async (req: MemberRequest, res: MemberResponse) => {
   }
 });
 
-router.patch("/members/:id", async (req: MemberRequest, res: MemberResponse) => {
+router.patch("/members/:id", async (req: MemberRequest, res: Response) => {
   const params = UpdateMemberParams.safeParse(req.params);
   const body = UpdateMemberBody.safeParse(req.body);
   if (!params.success || !body.success || !body.data.databaseId) return res.status(400).json({ error: "The Supabase registry and member name are required." });
@@ -144,7 +137,7 @@ router.patch("/members/:id", async (req: MemberRequest, res: MemberResponse) => 
   }
 });
 
-router.delete("/members/:id", async (req: MemberRequest, res: MemberResponse) => {
+router.delete("/members/:id", async (req: MemberRequest, res: Response) => {
   const params = GetMemberParams.safeParse(req.params);
   if (!params.success) return res.status(400).json({ error: "A member is required." });
   try {

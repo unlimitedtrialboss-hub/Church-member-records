@@ -24,7 +24,7 @@ type StorageResponse = ExpressResponse & {
   end(): StorageResponse;
 };
 
-router.post("/storage/uploads/request-url", async (req: StorageRequest, res: StorageResponse) => {
+router.post("/storage/uploads/request-url", async (req: StorageRequest, res: ExpressResponse) => {
   const { name, size, contentType } = req.body ?? {};
   if (
     typeof name !== "string" ||
@@ -47,7 +47,7 @@ router.post("/storage/uploads/request-url", async (req: StorageRequest, res: Sto
   }
 });
 
-router.get("/storage/objects/*path", async (req: StorageRequest, res: StorageResponse) => {
+router.get("/storage/objects/*path", async (req: StorageRequest, res: ExpressResponse) => {
   try {
     const rawPath = req.params.path;
     const path = Array.isArray(rawPath) ? rawPath.join("/") : rawPath ?? "";
