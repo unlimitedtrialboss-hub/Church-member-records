@@ -1,10 +1,6 @@
 # Ignore repo content that is not required for the production frontend deployment.
 artifacts/api-server
-artifacts/mockup-sandbox
 api
-lib
-db
-scripts
 supabase-auth.sql
 supabase-cleanup.sql
 DEPLOYMENT.md
